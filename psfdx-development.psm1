@@ -16,6 +16,19 @@ function Show-SfdxResult {
     return $result.result
 }
 
+function Install-SalesforceLwcDevServer {
+    [CmdletBinding()]
+    Param()       
+    Invoke-Sfdx -Command "sfdx plugins:install @salesforce/lwc-dev-server"
+    Invoke-Sfdx -Command "sfdx plugins:update"
+}
+
+function Start-SalesforceLwcDevServer {
+    [CmdletBinding()]
+    Param()       
+    Invoke-Sfdx -Command "sfdx force:lightning:lwc:start"    
+}
+
 function Get-SalesforceScratchOrgs {
     [CmdletBinding()]
     Param(
@@ -262,6 +275,9 @@ function New-SalesforceJestTest {
     $result = Invoke-Sfdx -Command $command    
     return Show-SfdxResult -Result $result 
 }
+
+Export-ModuleMember Install-SalesforceLwcDevServer
+Export-ModuleMember Start-SalesforceLwcDevServer
 
 Export-ModuleMember Get-SalesforceScratchOrgs
 Export-ModuleMember New-SalesforceScratchOrg
