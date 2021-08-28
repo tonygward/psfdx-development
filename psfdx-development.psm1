@@ -78,7 +78,22 @@ function New-SalesforceScratchOrg {
 
     $result = Invoke-Sfdx -Command $command
     $result = $result | ConvertFrom-Json
+    Write-Verbose $result
     return Show-SfdxResult -Result $result
+}
+
+function Remove-SalesforceScratchOrg {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)][string] $ScratchOrgUserName,
+        [Parameter()][switch] $NoPrompt
+    )    
+    # TODO: Check is Scratch Org   
+    $command = "sfdx force:org:delete --targetusername $ScratchOrgUserName"
+    if ($NoPrompt) {
+        $command += " --noprompt"
+    }
+    Invoke-Sfdx -Command $command
 }
 
 function New-SalesforceProject {
@@ -261,10 +276,10 @@ function Get-SalesforceCodeCoverage {
     return $values
 }
 
-function Import-SalesforceJest {
+function Install-SalesforceJest {
     [CmdletBinding()]
     Param()       
-    Invoke-Sfdx -Command "sfdx force:lightning:lwc:setup"
+    Invoke-Sfdx -Command "sfdx force:lightning:lwc:test:setup"
 }
 
 function New-SalesforceJestTest {
@@ -276,11 +291,30 @@ function New-SalesforceJestTest {
     return Show-SfdxResult -Result $result 
 }
 
+function Test-SalesforceJest {
+    [CmdletBinding()]
+    Param()       
+    Invoke-Sfdx -Command "npm run test:unit"
+}
+
+function Debug-SalesforceJest {
+    [CmdletBinding()]
+    Param()       
+    Invoke-Sfdx -Command "npm run test:unit:debug"
+}
+
+function Watch-SalesforceJest {
+    [CmdletBinding()]
+    Param()       
+    Invoke-Sfdx -Command "npm run test:unit:watch"
+}
+
 Export-ModuleMember Install-SalesforceLwcDevServer
 Export-ModuleMember Start-SalesforceLwcDevServer
 
 Export-ModuleMember Get-SalesforceScratchOrgs
 Export-ModuleMember New-SalesforceScratchOrg
+Export-ModuleMember Remove-SalesforceScratchOrg
 
 Export-ModuleMember New-SalesforceProject
 Export-ModuleMember Set-SalesforceProject
@@ -288,5 +322,8 @@ Export-ModuleMember Set-SalesforceProject
 Export-ModuleMember Test-Salesforce
 Export-ModuleMember Get-SalesforceCodeCoverage
 
-Export-ModuleMember Import-SalesforceJest
+Export-ModuleMember Install-SalesforceJest
 Export-ModuleMember New-SalesforceJestTest
+Export-ModuleMember Test-SalesforceJest
+Export-ModuleMember Debug-SalesforceJest
+Export-ModuleMember Watch-SalesforceJest
