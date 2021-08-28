@@ -19,6 +19,7 @@ function Show-SfdxResult {
 function Install-SalesforceLwcDevServer {
     [CmdletBinding()]
     Param()       
+    Invoke-Sfdx -Command "npm install -g node-gyp"
     Invoke-Sfdx -Command "sfdx plugins:install @salesforce/lwc-dev-server"
     Invoke-Sfdx -Command "sfdx plugins:update"
 }
@@ -77,8 +78,6 @@ function New-SalesforceScratchOrg {
     $command += " --json"
 
     $result = Invoke-Sfdx -Command $command
-    $result = $result | ConvertFrom-Json
-    Write-Verbose $result
     return Show-SfdxResult -Result $result
 }
 
