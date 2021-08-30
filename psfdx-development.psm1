@@ -454,7 +454,7 @@ function Watch-SalesforceApex {
 
         $outputDir = Get-SalesforceTestResultsApexFolder -ProjectFolder $ProjectFolder
         $testClassNames = Get-SalesforceApexTestsClasses -ProjectFolder $ProjectFolder
-        Test-Salesforce -Username $username -ClassName $testClassNames -IncludeCodeCoverage:$false -OutputDirectory $outputDir -RunAsynchronously
+        Test-Salesforce -Username $username -ClassName $testClassNames -IncludeCodeCoverage:$false -OutputDirectory $outputDir
     }
 } 
 
