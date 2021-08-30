@@ -450,7 +450,7 @@ function Watch-SalesforceApex {
     $type = Get-SalesforceType -FileName $FileName
     if (($type -eq "ApexClass") -or ($type -eq "ApexTrigger")) {
         $name = Get-SalesforceName -FileName $FileName
-        # Deploy-SalesforceComponent -Type $type -Name $name -Username $username
+        Deploy-SalesforceComponent -Type $type -Name $name -Username $username
 
         $outputDir = Get-SalesforceTestResultsApexFolder -ProjectFolder $ProjectFolder
         $testClassNames = Get-SalesforceApexTestsClasses -ProjectFolder $ProjectFolder
