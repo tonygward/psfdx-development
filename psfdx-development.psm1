@@ -169,6 +169,30 @@ function Set-SalesforceProject {
     Set-Content -Path $sfdxFile -Value $json 
 }
 
+function Get-SalesforceDefaultUserName {
+    [CmdletBinding()]
+    Param()  
+
+    $sfdxFolder = (Get-Location).Path
+
+    $sfdxConfigFile = ""
+    $files = Get-ChildItem -Recurse -Filter "sfdx-config.json"
+    foreach ($file in $files) {
+        if ($file.FullName -like "*.sfdx*") {
+            $sfdxConfigFile = $file
+            break
+        }
+    }
+
+    if (!(Test-Path -Path $sfdxConfigFile)) {
+        throw "Missing Salesforce Project File (sfdx-config.json)"
+    }  
+    Write-Verbose "Found sfdx config ($sfdxConfigFile)"     
+
+    $salesforceSettings = Get-Content -Raw -Path $sfdxConfigFile | ConvertFrom-Json
+    return $salesforceSettings.defaultusername
+}
+
 function Test-Salesforce {
     [CmdletBinding()]
     Param(        
@@ -317,6 +341,7 @@ Export-ModuleMember Remove-SalesforceScratchOrg
 
 Export-ModuleMember New-SalesforceProject
 Export-ModuleMember Set-SalesforceProject
+Export-ModuleMember Get-SalesforceDefaultUserName
 
 Export-ModuleMember Test-Salesforce
 Export-ModuleMember Get-SalesforceCodeCoverage
