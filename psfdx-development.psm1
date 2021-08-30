@@ -169,11 +169,27 @@ function Set-SalesforceProject {
     Set-Content -Path $sfdxFile -Value $json 
 }
 
+function Get-IsSalesforceProject {
+    [CmdletBinding()]
+    Param([Parameter(Mandatory = $true)][string] $ProjectFolder) 
+
+    $sfdxProjectFile = Join-Path -Path $ProjectFolder -ChildPath "sfdx-project.json"
+    if (Test-Path -Path $sfdxProjectFile) {
+        return $true
+    }
+    return $false
+}
+
 function Get-SalesforceDefaultUserName {
     [CmdletBinding()]
-    Param()  
+    Param([Parameter(Mandatory = $false)][string] $ProjectFolder)  
 
-    $sfdxFolder = (Get-Location).Path
+    if (($null -eq $ProjectFolder) -or ($ProjectFolder -eq '')) {
+        $sfdxFolder = (Get-Location).Path
+    }
+    else {
+        $sfdxFolder = $ProjectFolder
+    }  
 
     $sfdxConfigFile = ""
     $files = Get-ChildItem -Recurse -Filter "sfdx-config.json"
@@ -205,7 +221,10 @@ function Test-Salesforce {
         [Parameter(Mandatory = $false)][switch] $RunAsynchronously,
         [Parameter(Mandatory = $false)][switch] $DetailedCoverage,
 
-        [Parameter(Mandatory = $false)][int] $WaitMinutes = 10
+        [Parameter(Mandatory = $false)][int] $WaitMinutes = 10,
+        [Parameter(Mandatory = $false)][switch] $IncludeCodeCoverage = $true,
+
+        [Parameter(Mandatory = $false)][string] $OutputDirectory
     )   
     
     $command = "sfdx force:apex:test:run"
@@ -216,7 +235,7 @@ function Test-Salesforce {
         else { $command += " --synchronous" }
 
     }     
-    elseif (-not $TestName) {
+    elseif ((-not $TestName) -and ($ClassName)) {
         # Run Test Class
         $command += " --classnames $ClassName" 
         if ($RunAsynchronously) { $command += "" }
@@ -227,30 +246,42 @@ function Test-Salesforce {
         $command += " --testlevel RunLocalTests"           
     }
 
-    $command += " --wait:$WaitMinutes"
-    $command += " --outputdir $PSScriptRoot"
+    # $command += " --wait:$WaitMinutes"
+    if ($OutputDirectory) {
+        $command += " --outputdir $OutputDirectory"
+    } else {
+        $command += " --outputdir $PSScriptRoot"
+    }
 
     if ($DetailedCoverage) {
         $command += " --detailedcoverage"
     }    
-    $command += " --codecoverage"
+    if ($IncludeCodeCoverage) {
+        $command += " --codecoverage"
+    }
     $command += " --targetusername $Username"
     $command += " --resultformat $ResultFormat"
-    $command += " --json"
+    # $command += " --json"
 
     $result = Invoke-Sfdx -Command $command
     $result = $result | ConvertFrom-Json
-    
-    [int]$codeCoverage = ($result.result.summary.testRunCoverage -replace '%')
-    if ($codeCoverage -lt 75) { 
-        $result.result.coverage.coverage                
-        throw 'Insufficent code coverage '
-    }
+
+    Write-Verbose $result
 
     $result.result.tests
     if ($result.result.summary.outcome -ne 'Passed') { 
         throw ($result.result.summary.failing.tostring() + " Tests Failed") 
     }
+
+    if (!$IncludeCodeCoverage) {
+        return
+    }
+    
+    [int]$codeCoverage = ($result.result.summary.testRunCoverage -replace '%')
+    if ($codeCoverage -lt 75) { 
+        $result.result.coverage.coverage                
+        throw 'Insufficent code coverage '
+    }    
 }
 
 function Get-SalesforceCodeCoverage {
@@ -332,6 +363,101 @@ function Watch-SalesforceJest {
     Invoke-Sfdx -Command "npm run test:unit:watch"
 }
 
+function Deploy-SalesforceComponent {
+    [CmdletBinding()]
+    Param(        
+        [Parameter(Mandatory = $false)][string][ValidateSet('ApexClass', 'ApexTrigger')] $Type = 'ApexClass',       
+        [Parameter(Mandatory = $false)][string] $Name,       
+        [Parameter(Mandatory = $true)][string] $Username
+    )    
+    $command = "sfdx force:source:deploy --metadata $Type"
+    if ($Name) { 
+        $command += ":$Name" 
+    }
+    $command += " --targetusername $Username"
+    $command += " --json"
+    
+    $response = Invoke-Sfdx -Command $command | ConvertFrom-Json
+    if ($response.result.success -ne $true) {
+        Write-Verbose $result
+        throw ("Failed to Deploy ")
+    }
+}
+
+function Get-SalesforceType {
+    [CmdletBinding()]
+    Param([Parameter(Mandatory = $false)][string] $FileName)
+
+    if ($FileName.EndsWith(".cls")) {
+        return "ApexClass"
+    }
+    if ($FileName.EndsWith(".cls")) {
+        return "ApexTrigger"
+    }    
+    return ""
+}
+
+function Get-SalesforceName {
+    [CmdletBinding()]
+    Param([Parameter(Mandatory = $false)][string] $FileName)  
+
+    $name = (Get-Item $FileName).Basename
+    Write-Verbose ("Apex Name: " + $name)
+    return $name
+}
+
+function Get-SalesforceTestResultsApexFolder {
+    [CmdletBinding()]
+    Param([Parameter(Mandatory = $true)][string] $ProjectFolder)
+
+    $folder = Join-Path -Path $ProjectFolder -ChildPath ".sfdx\tools\testresults\apex"
+    Write-Verbose ("Apex Test Results Folder: " + $folder)
+    # TODO: Check Folder Exists
+    return $folder
+}
+
+function Get-SalesforceApexTestsClasses {
+    [CmdletBinding()]
+    Param([Parameter(Mandatory = $true)][string] $ProjectFolder)
+
+    $classesFolder = Join-Path -Path $ProjectFolder -ChildPath "force-app\main\default\classes"    
+    $classes = Get-ChildItem -Path $classesFolder -Filter *.cls
+    $testClasses = @()
+    foreach ($class in $classes) {        
+        if (Select-String -Path $class -Pattern "@isTest") {
+            Write-Verbose ("Found Apex Test Class: " + $class)
+            $testClasses += Get-SalesforceName -FileName $class
+        }
+    }
+    $testClassNames = $testClasses -join ","
+    Write-Verbose ("Apex Test Class Names: " + $testClassNames)
+    return $testClassNames
+}
+
+function Watch-SalesforceApex {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)][string] $ProjectFolder,
+        [Parameter(Mandatory = $true)][string] $FileName
+    )
+
+    if ((Get-IsSalesforceProject -ProjectFolder $ProjectFolder) -eq $false) {
+        Write-Verbose "Not a Salesforce Project"
+        return
+    }  
+    $username = Get-SalesforceDefaultUserName -ProjectFolder $ProjectFolder
+
+    $type = Get-SalesforceType -FileName $FileName
+    if (($type -eq "ApexClass") -or ($type -eq "ApexTrigger")) {
+        $name = Get-SalesforceName -FileName $FileName
+        # Deploy-SalesforceComponent -Type $type -Name $name -Username $username
+
+        $outputDir = Get-SalesforceTestResultsApexFolder -ProjectFolder $ProjectFolder
+        $testClassNames = Get-SalesforceApexTestsClasses -ProjectFolder $ProjectFolder
+        Test-Salesforce -Username $username -ClassName $testClassNames -IncludeCodeCoverage:$false -OutputDirectory $outputDir -RunAsynchronously
+    }
+} 
+
 Export-ModuleMember Install-SalesforceLwcDevServer
 Export-ModuleMember Start-SalesforceLwcDevServer
 
@@ -351,3 +477,5 @@ Export-ModuleMember New-SalesforceJestTest
 Export-ModuleMember Test-SalesforceJest
 Export-ModuleMember Debug-SalesforceJest
 Export-ModuleMember Watch-SalesforceJest
+
+Export-ModuleMember Watch-SalesforceApex
