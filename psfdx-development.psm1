@@ -1,13 +1,13 @@
 function Invoke-Sfdx {
     [CmdletBinding()]
-    Param([Parameter(Mandatory = $true)][string] $Command)        
+    Param([Parameter(Mandatory = $true)][string] $Command)
     Write-Verbose $Command
     return Invoke-Expression -Command $Command
 }
 
 function Show-SfdxResult {
     [CmdletBinding()]
-    Param([Parameter(Mandatory = $true)][psobject] $Result)           
+    Param([Parameter(Mandatory = $true)][psobject] $Result)
     $result = $Result | ConvertFrom-Json
     if ($result.status -ne 0) {
         Write-Debug $result
@@ -18,7 +18,7 @@ function Show-SfdxResult {
 
 function Install-SalesforceLwcDevServer {
     [CmdletBinding()]
-    Param()       
+    Param()
     Invoke-Sfdx -Command "npm install -g node-gyp"
     Invoke-Sfdx -Command "sfdx plugins:install @salesforce/lwc-dev-server"
     Invoke-Sfdx -Command "sfdx plugins:update"
@@ -26,8 +26,8 @@ function Install-SalesforceLwcDevServer {
 
 function Start-SalesforceLwcDevServer {
     [CmdletBinding()]
-    Param()       
-    Invoke-Sfdx -Command "sfdx force:lightning:lwc:start"    
+    Param()
+    Invoke-Sfdx -Command "sfdx force:lightning:lwc:start"
 }
 
 function Get-SalesforceScratchOrgs {
@@ -43,8 +43,8 @@ function Get-SalesforceScratchOrgs {
     }
     $command += " --json"
     $result = Invoke-Sfdx -Command "sfdx force:org:list --all --json"
-    
-    $result = $result | ConvertFrom-Json   
+
+    $result = $result | ConvertFrom-Json
     $result = $result.result.scratchOrgs
     $result = $result | Select-Object orgId, instanceUrl, username, connectedStatus, isDevHub, lastUsed, alias
     if ($Last) {
@@ -55,24 +55,26 @@ function Get-SalesforceScratchOrgs {
 
 function New-SalesforceScratchOrg {
     [CmdletBinding()]
-    Param(        
-        [Parameter(Mandatory = $true)][string] $Username,
+    Param(
         [Parameter(Mandatory = $false)][string] $DevhubUsername,
+        [Parameter(Mandatory = $false)][string] $Username,
         [Parameter(Mandatory = $false)][int] $DurationDays,
         [Parameter(Mandatory = $false)][string] $DefinitionFile = 'config/project-scratch-def.json',
         [Parameter(Mandatory = $false)][int] $WaitMinutes
-    )     
-    $command = "sfdx force:org:create"   
+    )
+    $command = "sfdx force:org:create"
     $command += " --type scratch"
     if ($DevhubUsername) {
         $command += " --targetdevhubusername $DevhubUsername"
+    }
+    if ($Username) {
+        $command += " --targetusername $Username"
     }
     if ($DaysDuration) {
         $command += " --durationdays $DurationDays"
     }
     $command += " --definitionfile $DefinitionFile"
-    $command += " --targetdevhubusername $Username"
-    if ($WaitMinutes) { 
+    if ($WaitMinutes) {
         $command += " --wait $WaitMinutes"
     }
     $command += " --json"
@@ -86,8 +88,8 @@ function Remove-SalesforceScratchOrg {
     Param(
         [Parameter(Mandatory = $true)][string] $ScratchOrgUserName,
         [Parameter()][switch] $NoPrompt
-    )    
-    # TODO: Check is Scratch Org   
+    )
+    # TODO: Check is Scratch Org
     $command = "sfdx force:org:delete --targetusername $ScratchOrgUserName"
     if ($NoPrompt) {
         $command += " --noprompt"
@@ -106,7 +108,7 @@ function New-SalesforceProject {
         [Parameter(Mandatory = $false)][string] $DefaultPackageDirectory,
         [Parameter(Mandatory = $false)][string] $Namespace,
         [Parameter(Mandatory = $false)][switch] $GenerateManifest
-    )      
+    )
     # "sfdx force:project:create --projectname $Name --template $Template --json"
     $command = "sfdx force:project:create --projectname $Name"
 
@@ -122,43 +124,43 @@ function New-SalesforceProject {
     if ($GenerateManifest) {
         $command += " --manifest"
     }
-    
+
     $command += " --template $Template"
     $command += " --json"
 
-    $result = Invoke-Sfdx -Command "sfdx force:project:create --projectname $Name --template $Template --json" 
+    $result = Invoke-Sfdx -Command "sfdx force:project:create --projectname $Name --template $Template --json"
     $result = Show-SfdxResult -Result $result
-    
-    if (($null -ne $DefaultUserName) -and ($DefaultUserName -ne '')) {                
+
+    if (($null -ne $DefaultUserName) -and ($DefaultUserName -ne '')) {
         $projectFolder = Join-Path -Path $result.outputDir -ChildPath $Name
         New-Item -Path $projectFolder -Name ".sfdx" -ItemType Directory | Out-Null
-        Set-SalesforceProject -DefaultUserName $DefaultUserName -ProjectFolder $projectFolder 
+        Set-SalesforceProject -DefaultUserName $DefaultUserName -ProjectFolder $projectFolder
     }
     return $result
 }
 
 function Set-SalesforceProject {
     [CmdletBinding()]
-    Param( 
+    Param(
         [Parameter(Mandatory = $true)][string] $DefaultUserName,
         [Parameter(Mandatory = $false)][string] $ProjectFolder
-    )       
+    )
 
     if (($null -eq $ProjectFolder) -or ($ProjectFolder -eq '')) {
         $sfdxFolder = (Get-Location).Path
     }
     else {
         $sfdxFolder = $ProjectFolder
-    }    
-    
+    }
+
     if ($sfdxFolder.EndsWith(".sfdx") -eq $false) {
         $sfdxFolder = Join-Path -Path $sfdxFolder -ChildPath ".sfdx"
     }
 
     if ((Test-Path -Path $sfdxFolder) -eq $false) {
         throw ".sfdx folder does not exist ing $sfdxFolder"
-    }   
-    
+    }
+
     $sfdxFile = Join-Path -Path $sfdxFolder -ChildPath "sfdx-config.json"
     if (Test-Path -Path $sfdxFile) {
         throw "File already exists $sfdxFile"
@@ -166,12 +168,12 @@ function Set-SalesforceProject {
 
     New-Item -Path $sfdxFile | Out-Null
     $json = "{ `"defaultusername`": `"$DefaultUserName`" }"
-    Set-Content -Path $sfdxFile -Value $json 
+    Set-Content -Path $sfdxFile -Value $json
 }
 
 function Get-IsSalesforceProject {
     [CmdletBinding()]
-    Param([Parameter(Mandatory = $true)][string] $ProjectFolder) 
+    Param([Parameter(Mandatory = $true)][string] $ProjectFolder)
 
     $sfdxProjectFile = Join-Path -Path $ProjectFolder -ChildPath "sfdx-project.json"
     if (Test-Path -Path $sfdxProjectFile) {
@@ -182,14 +184,14 @@ function Get-IsSalesforceProject {
 
 function Get-SalesforceDefaultUserName {
     [CmdletBinding()]
-    Param([Parameter(Mandatory = $false)][string] $ProjectFolder)  
+    Param([Parameter(Mandatory = $false)][string] $ProjectFolder)
 
     if (($null -eq $ProjectFolder) -or ($ProjectFolder -eq '')) {
         $sfdxFolder = (Get-Location).Path
     }
     else {
         $sfdxFolder = $ProjectFolder
-    }  
+    }
 
     $sfdxConfigFile = ""
     $files = Get-ChildItem -Recurse -Filter "sfdx-config.json"
@@ -202,8 +204,8 @@ function Get-SalesforceDefaultUserName {
 
     if (!(Test-Path -Path $sfdxConfigFile)) {
         throw "Missing Salesforce Project File (sfdx-config.json)"
-    }  
-    Write-Verbose "Found sfdx config ($sfdxConfigFile)"     
+    }
+    Write-Verbose "Found sfdx config ($sfdxConfigFile)"
 
     $salesforceSettings = Get-Content -Raw -Path $sfdxConfigFile | ConvertFrom-Json
     return $salesforceSettings.defaultusername
@@ -211,9 +213,9 @@ function Get-SalesforceDefaultUserName {
 
 function Test-Salesforce {
     [CmdletBinding()]
-    Param(        
-        [Parameter(Mandatory = $false)][string] $ClassName,       
-        [Parameter(Mandatory = $false)][string] $TestName, 
+    Param(
+        [Parameter(Mandatory = $false)][string] $ClassName,
+        [Parameter(Mandatory = $false)][string] $TestName,
         [Parameter(Mandatory = $true)][string] $Username,
 
         [Parameter(Mandatory = $false)][string][ValidateSet('human', 'tap', 'junit', 'json')] $ResultFormat = 'json',
@@ -225,25 +227,25 @@ function Test-Salesforce {
         [Parameter(Mandatory = $false)][switch] $IncludeCodeCoverage = $true,
 
         [Parameter(Mandatory = $false)][string] $OutputDirectory
-    )   
-    
+    )
+
     $command = "sfdx force:apex:test:run"
     if ($ClassName -and $TestName) {
         # Run specific Test in a Class
-        $command += " --tests $ClassName.$TestName" 
+        $command += " --tests $ClassName.$TestName"
         if ($RunAsynchronously) { $command += "" }
         else { $command += " --synchronous" }
 
-    }     
+    }
     elseif ((-not $TestName) -and ($ClassName)) {
         # Run Test Class
-        $command += " --classnames $ClassName" 
+        $command += " --classnames $ClassName"
         if ($RunAsynchronously) { $command += "" }
         else { $command += " --synchronous" }
-    }     
+    }
     else {
         # Run all Tests
-        $command += " --testlevel RunLocalTests"           
+        $command += " --testlevel RunLocalTests"
     }
 
     # $command += " --wait:$WaitMinutes"
@@ -255,7 +257,7 @@ function Test-Salesforce {
 
     if ($DetailedCoverage) {
         $command += " --detailedcoverage"
-    }    
+    }
     if ($IncludeCodeCoverage) {
         $command += " --codecoverage"
     }
@@ -269,19 +271,19 @@ function Test-Salesforce {
     Write-Verbose $result
 
     $result.result.tests
-    if ($result.result.summary.outcome -ne 'Passed') { 
-        throw ($result.result.summary.failing.tostring() + " Tests Failed") 
+    if ($result.result.summary.outcome -ne 'Passed') {
+        throw ($result.result.summary.failing.tostring() + " Tests Failed")
     }
 
     if (!$IncludeCodeCoverage) {
         return
     }
-    
+
     [int]$codeCoverage = ($result.result.summary.testRunCoverage -replace '%')
-    if ($codeCoverage -lt 75) { 
-        $result.result.coverage.coverage                
+    if ($codeCoverage -lt 75) {
+        $result.result.coverage.coverage
         throw 'Insufficent code coverage '
-    }    
+    }
 }
 
 function Get-SalesforceCodeCoverage {
@@ -289,10 +291,10 @@ function Get-SalesforceCodeCoverage {
     Param(
         [Parameter(Mandatory = $false)][string] $ApexClassOrTrigger = $null,
         [Parameter(Mandatory = $true)][string] $Username
-    )    
-    $query = "SELECT ApexTestClass.Name, TestMethodName, ApexClassOrTrigger.Name, NumLinesUncovered, NumLinesCovered, Coverage "    
+    )
+    $query = "SELECT ApexTestClass.Name, TestMethodName, ApexClassOrTrigger.Name, NumLinesUncovered, NumLinesCovered, Coverage "
     $query += "FROM ApexCodeCoverage "
-    if (($null -ne $ApexClassOrTrigger) -and ($ApexClassOrTrigger -ne '')) {        
+    if (($null -ne $ApexClassOrTrigger) -and ($ApexClassOrTrigger -ne '')) {
         $apexClass = Get-SalesforceApexClass -Name $ApexClassOrTrigger -Username $Username
         $apexClassId = $apexClass.Id
         $query += "WHERE ApexClassOrTriggerId = '$apexClassId' "
@@ -303,28 +305,28 @@ function Get-SalesforceCodeCoverage {
     if ($result.status -ne 0) {
         throw ($result.message)
     }
-    $result = $result.result.records   
-    
+    $result = $result.result.records
+
     $values = @()
     foreach ($item in $result) {
         $value = New-Object -TypeName PSObject
         $value | Add-Member -MemberType NoteProperty -Name 'ApexClassOrTrigger' -Value $item.ApexClassOrTrigger.Name
-        $value | Add-Member -MemberType NoteProperty -Name 'ApexTestClass' -Value $item.ApexTestClass.Name        
-        $value | Add-Member -MemberType NoteProperty -Name 'TestMethodName' -Value $item.TestMethodName                   
+        $value | Add-Member -MemberType NoteProperty -Name 'ApexTestClass' -Value $item.ApexTestClass.Name
+        $value | Add-Member -MemberType NoteProperty -Name 'TestMethodName' -Value $item.TestMethodName
 
         $codeCoverage = 0
         $codeLength = $item.NumLinesCovered + $item.NumLinesUncovered
         if ($codeLength -gt 0) {
             $codeCoverage = $item.NumLinesCovered / $codeLength
         }
-        $value | Add-Member -MemberType NoteProperty -Name 'CodeCoverage' -Value $codeCoverage.toString("P")                       
+        $value | Add-Member -MemberType NoteProperty -Name 'CodeCoverage' -Value $codeCoverage.toString("P")
         $codeCoverageOK = $false
         if ($codeCoverage -ge 0.75) { $codeCoverageOK = $true }
 
-        $value | Add-Member -MemberType NoteProperty -Name 'CodeCoverageOK' -Value $codeCoverageOK              
+        $value | Add-Member -MemberType NoteProperty -Name 'CodeCoverageOK' -Value $codeCoverageOK
         $value | Add-Member -MemberType NoteProperty -Name 'NumLinesCovered' -Value $item.NumLinesCovered
-        $value | Add-Member -MemberType NoteProperty -Name 'NumLinesUncovered' -Value $item.NumLinesUncovered   
-        $values += $value        
+        $value | Add-Member -MemberType NoteProperty -Name 'NumLinesUncovered' -Value $item.NumLinesUncovered
+        $values += $value
     }
 
     return $values
@@ -332,51 +334,51 @@ function Get-SalesforceCodeCoverage {
 
 function Install-SalesforceJest {
     [CmdletBinding()]
-    Param()       
+    Param()
     Invoke-Sfdx -Command "sfdx force:lightning:lwc:test:setup"
 }
 
 function New-SalesforceJestTest {
     [CmdletBinding()]
-    Param([Parameter(Mandatory = $true)][string] $LwcName)       
+    Param([Parameter(Mandatory = $true)][string] $LwcName)
     $filePath = "force-app/main/default/lwc/$LwcName/$LwcName.js"
     $command = "sfdx force:lightning:lwc:test:create --filepath $filePath --json"
-    $result = Invoke-Sfdx -Command $command    
-    return Show-SfdxResult -Result $result 
+    $result = Invoke-Sfdx -Command $command
+    return Show-SfdxResult -Result $result
 }
 
 function Test-SalesforceJest {
     [CmdletBinding()]
-    Param()       
+    Param()
     Invoke-Sfdx -Command "npm run test:unit"
 }
 
 function Debug-SalesforceJest {
     [CmdletBinding()]
-    Param()       
+    Param()
     Invoke-Sfdx -Command "npm run test:unit:debug"
 }
 
 function Watch-SalesforceJest {
     [CmdletBinding()]
-    Param()       
+    Param()
     Invoke-Sfdx -Command "npm run test:unit:watch"
 }
 
 function Deploy-SalesforceComponent {
     [CmdletBinding()]
-    Param(        
-        [Parameter(Mandatory = $false)][string][ValidateSet('ApexClass', 'ApexTrigger')] $Type = 'ApexClass',       
-        [Parameter(Mandatory = $false)][string] $Name,       
+    Param(
+        [Parameter(Mandatory = $false)][string][ValidateSet('ApexClass', 'ApexTrigger')] $Type = 'ApexClass',
+        [Parameter(Mandatory = $false)][string] $Name,
         [Parameter(Mandatory = $true)][string] $Username
-    )    
+    )
     $command = "sfdx force:source:deploy --metadata $Type"
-    if ($Name) { 
-        $command += ":$Name" 
+    if ($Name) {
+        $command += ":$Name"
     }
     $command += " --targetusername $Username"
     $command += " --json"
-    
+
     $response = Invoke-Sfdx -Command $command | ConvertFrom-Json
     if ($response.result.success -ne $true) {
         Write-Verbose $result
@@ -393,13 +395,13 @@ function Get-SalesforceType {
     }
     if ($FileName.EndsWith(".cls")) {
         return "ApexTrigger"
-    }    
+    }
     return ""
 }
 
 function Get-SalesforceName {
     [CmdletBinding()]
-    Param([Parameter(Mandatory = $false)][string] $FileName)  
+    Param([Parameter(Mandatory = $false)][string] $FileName)
 
     $name = (Get-Item $FileName).Basename
     Write-Verbose ("Apex Name: " + $name)
@@ -420,10 +422,10 @@ function Get-SalesforceApexTestsClasses {
     [CmdletBinding()]
     Param([Parameter(Mandatory = $true)][string] $ProjectFolder)
 
-    $classesFolder = Join-Path -Path $ProjectFolder -ChildPath "force-app\main\default\classes"    
+    $classesFolder = Join-Path -Path $ProjectFolder -ChildPath "force-app\main\default\classes"
     $classes = Get-ChildItem -Path $classesFolder -Filter *.cls
     $testClasses = @()
-    foreach ($class in $classes) {        
+    foreach ($class in $classes) {
         if (Select-String -Path $class -Pattern "@isTest") {
             Write-Verbose ("Found Apex Test Class: " + $class)
             $testClasses += Get-SalesforceName -FileName $class
@@ -444,7 +446,7 @@ function Watch-SalesforceApex {
     if ((Get-IsSalesforceProject -ProjectFolder $ProjectFolder) -eq $false) {
         Write-Verbose "Not a Salesforce Project"
         return
-    }  
+    }
     $username = Get-SalesforceDefaultUserName -ProjectFolder $ProjectFolder
 
     $type = Get-SalesforceType -FileName $FileName
@@ -456,7 +458,7 @@ function Watch-SalesforceApex {
         $testClassNames = Get-SalesforceApexTestsClasses -ProjectFolder $ProjectFolder
         Test-Salesforce -Username $username -ClassName $testClassNames -IncludeCodeCoverage:$false -OutputDirectory $outputDir
     }
-} 
+}
 
 Export-ModuleMember Install-SalesforceLwcDevServer
 Export-ModuleMember Start-SalesforceLwcDevServer
