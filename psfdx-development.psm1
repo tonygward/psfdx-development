@@ -460,6 +460,13 @@ function Watch-SalesforceApex {
     }
 }
 
+function Set-SalesforceDefaultUser {
+    [CmdletBinding()]
+    Param([Parameter(Mandatory = $true)][string] $Username)
+
+    Invoke-Sfdx -Command "sfdx config:set defaultusername=$Username"
+}
+
 Export-ModuleMember Install-SalesforceLwcDevServer
 Export-ModuleMember Start-SalesforceLwcDevServer
 
@@ -481,3 +488,5 @@ Export-ModuleMember Debug-SalesforceJest
 Export-ModuleMember Watch-SalesforceJest
 
 Export-ModuleMember Watch-SalesforceApex
+
+Export-ModuleMember Set-SalesforceDefaultUser
