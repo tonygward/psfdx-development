@@ -211,6 +211,40 @@ function Get-SalesforceDefaultUserName {
     return $salesforceSettings.defaultusername
 }
 
+function Get-SalesforceProjectConfig {
+    [CmdletBinding()]
+    Param()
+    $sfdxConfigFile = ""
+    $files = Get-ChildItem -Recurse -Filter "sfdx-config.json"
+    foreach ($file in $files) {
+        if ($file.FullName -like "*.sfdx*") {
+            $sfdxConfigFile = $file
+            break
+        }
+    }
+
+    if (!(Test-Path -Path $sfdxConfigFile)) {
+        throw "Missing Salesforce Project File (sfdx-config.json)"
+    }
+    Write-Verbose "Found sfdx config ($sfdxConfigFile)"
+    return $sfdxConfigFile
+}
+
+function Get-SalesforceProjectUser {
+    [CmdletBinding()]
+    Param()
+    $sfdxConfigFile = Get-SalesforceProjectConfig
+    $salesforceSettings = Get-Content -Raw -Path $sfdxConfigFile | ConvertFrom-Json
+    return $salesforceSettings.defaultusername
+}
+
+function Set-SalesforceProjectUser {
+    [CmdletBinding()]
+    Param([Parameter(Mandatory = $true)][string] $Username)
+
+    Invoke-Sfdx -Command "sfdx config:set defaultusername=$Username"
+}
+
 function Test-Salesforce {
     [CmdletBinding()]
     Param(
@@ -460,13 +494,6 @@ function Watch-SalesforceApex {
     }
 }
 
-function Set-SalesforceDefaultUser {
-    [CmdletBinding()]
-    Param([Parameter(Mandatory = $true)][string] $Username)
-
-    Invoke-Sfdx -Command "sfdx config:set defaultusername=$Username"
-}
-
 Export-ModuleMember Install-SalesforceLwcDevServer
 Export-ModuleMember Start-SalesforceLwcDevServer
 
@@ -477,6 +504,8 @@ Export-ModuleMember Remove-SalesforceScratchOrg
 Export-ModuleMember New-SalesforceProject
 Export-ModuleMember Set-SalesforceProject
 Export-ModuleMember Get-SalesforceDefaultUserName
+Export-ModuleMember Get-SalesforceProjectUser
+Export-ModuleMember Set-SalesforceProjectUser
 
 Export-ModuleMember Test-Salesforce
 Export-ModuleMember Get-SalesforceCodeCoverage
@@ -488,5 +517,3 @@ Export-ModuleMember Debug-SalesforceJest
 Export-ModuleMember Watch-SalesforceJest
 
 Export-ModuleMember Watch-SalesforceApex
-
-Export-ModuleMember Set-SalesforceDefaultUser
