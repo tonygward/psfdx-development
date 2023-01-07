@@ -250,7 +250,7 @@ function Test-Salesforce {
     Param(
         [Parameter(Mandatory = $false)][string] $ClassName,
         [Parameter(Mandatory = $false)][string] $TestName,
-        [Parameter(Mandatory = $true)][string] $Username,
+        [Parameter(Mandatory = $false)][string] $Username,
 
         [Parameter(Mandatory = $false)][string][ValidateSet('human', 'tap', 'junit', 'json')] $ResultFormat = 'json',
 
@@ -289,15 +289,10 @@ function Test-Salesforce {
         $command += " --outputdir $PSScriptRoot"
     }
 
-    if ($DetailedCoverage) {
-        $command += " --detailedcoverage"
-    }
-    if ($IncludeCodeCoverage) {
-        $command += " --codecoverage"
-    }
-    $command += " --targetusername $Username"
+    if ($DetailedCoverage) { $command += " --detailedcoverage" }
+    if ($IncludeCodeCoverage) { $command += " --codecoverage" }
+    if ($Username) { $command += " --targetusername $Username" }
     $command += " --resultformat $ResultFormat"
-    # $command += " --json"
 
     $result = Invoke-Sfdx -Command $command
     $result = $result | ConvertFrom-Json
@@ -499,7 +494,8 @@ function Push-Salesforce {
     Param(
         [Parameter(Mandatory = $false)][string] $Username,
         [Parameter(Mandatory = $false)][switch] $ForceOverwrite,
-        [Parameter(Mandatory = $false)][switch] $IgnoreWarnings
+        [Parameter(Mandatory = $false)][switch] $IgnoreWarnings,
+        [Parameter(Mandatory = $false)][switch] $Test
     )
 
     $command = "sfdx force:source:push"
@@ -507,6 +503,10 @@ function Push-Salesforce {
     if ($ForceOverwrite) { $command += " --forceoverwrite"}
     if ($IgnoreWarnings) { $command += " --ignorewarnings"}
     Invoke-Sfdx -Command "npm run test:unit:watch"
+
+    if ($Test) {
+        Test-Salesforce -Username:$Username
+    }
 }
 
 Export-ModuleMember Install-SalesforceLwcDevServer
