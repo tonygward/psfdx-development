@@ -502,7 +502,26 @@ function Push-Salesforce {
     if ($Username) { $command += " --targetusername $Username"}
     if ($ForceOverwrite) { $command += " --forceoverwrite"}
     if ($IgnoreWarnings) { $command += " --ignorewarnings"}
-    Invoke-Sfdx -Command "npm run test:unit:watch"
+    Invoke-Sfdx -Command $command
+
+    if ($Test) {
+        Test-Salesforce -Username:$Username
+    }
+}
+
+function Pull-Salesforce {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $false)][string] $Username,
+        [Parameter(Mandatory = $false)][switch] $ForceOverwrite,
+        [Parameter(Mandatory = $false)][switch] $IgnoreWarnings
+    )
+
+    $command = "sfdx force:source:pull"
+    if ($Username) { $command += " --targetusername $Username"}
+    if ($ForceOverwrite) { $command += " --forceoverwrite"}
+    if ($IgnoreWarnings) { $command += " --ignorewarnings"}
+    Invoke-Sfdx -Command $command
 
     if ($Test) {
         Test-Salesforce -Username:$Username
@@ -534,3 +553,4 @@ Export-ModuleMember Watch-SalesforceJest
 Export-ModuleMember Watch-SalesforceApex
 
 Export-ModuleMember Push-Salesforce
+Export-ModuleMember Pull-Salesforce
