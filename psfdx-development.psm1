@@ -494,6 +494,21 @@ function Watch-SalesforceApex {
     }
 }
 
+function Push-Salesforce {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $false)][string] $Username,
+        [Parameter(Mandatory = $false)][switch] $ForceOverwrite,
+        [Parameter(Mandatory = $false)][switch] $IgnoreWarnings
+    )
+
+    $command = "sfdx force:source:push"
+    if ($Username) { $command += " --targetusername $Username"}
+    if ($ForceOverwrite) { $command += " --forceoverwrite"}
+    if ($IgnoreWarnings) { $command += " --ignorewarnings"}
+    Invoke-Sfdx -Command "npm run test:unit:watch"
+}
+
 Export-ModuleMember Install-SalesforceLwcDevServer
 Export-ModuleMember Start-SalesforceLwcDevServer
 
@@ -517,3 +532,5 @@ Export-ModuleMember Debug-SalesforceJest
 Export-ModuleMember Watch-SalesforceJest
 
 Export-ModuleMember Watch-SalesforceApex
+
+Export-ModuleMember Push-Salesforce
