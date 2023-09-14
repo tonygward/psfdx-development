@@ -57,23 +57,18 @@ function New-SalesforceScratchOrg {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $false)][string] $DevhubUsername,
-        [Parameter(Mandatory = $false)][string] $Username,
         [Parameter(Mandatory = $false)][int] $DurationDays,
         [Parameter(Mandatory = $false)][string] $DefinitionFile = 'config/project-scratch-def.json',
         [Parameter(Mandatory = $false)][int] $WaitMinutes
     )
-    $command = "sfdx force:org:create"
-    $command += " --type scratch"
+    $command = "sf org create scratch"
     if ($DevhubUsername) {
-        $command += " --targetdevhubusername $DevhubUsername"
-    }
-    if ($Username) {
-        $command += " --targetusername $Username"
+        $command += " --target-dev-hub $DevhubUsername"
     }
     if ($DaysDuration) {
-        $command += " --durationdays $DurationDays"
+        $command += " --duration-days $DurationDays"
     }
-    $command += " --definitionfile $DefinitionFile"
+    $command += " --definition-file $DefinitionFile"
     if ($WaitMinutes) {
         $command += " --wait $WaitMinutes"
     }
@@ -89,10 +84,9 @@ function Remove-SalesforceScratchOrg {
         [Parameter(Mandatory = $true)][string] $ScratchOrgUserName,
         [Parameter()][switch] $NoPrompt
     )
-    # TODO: Check is Scratch Org
-    $command = "sfdx force:org:delete --targetusername $ScratchOrgUserName"
+    $command = "sf org delete scratch --target-org $ScratchOrgUserName"
     if ($NoPrompt) {
-        $command += " --noprompt"
+        $command += " --no-prompt"
     }
     Invoke-Sfdx -Command $command
 }
@@ -101,7 +95,7 @@ function New-SalesforceProject {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $true)][string] $Name,
-        [Parameter(Mandatory = $false)][string][ValidateSet('standard', 'empty')] $Template = 'standard',
+        [Parameter(Mandatory = $false)][string][ValidateSet('standard', 'empty', 'analytics')] $Template = 'standard',
         [Parameter(Mandatory = $false)][string] $DefaultUserName = $null,
 
         [Parameter(Mandatory = $false)][string] $OutputDirectory,
@@ -110,13 +104,13 @@ function New-SalesforceProject {
         [Parameter(Mandatory = $false)][switch] $GenerateManifest
     )
     # "sfdx force:project:create --projectname $Name --template $Template --json"
-    $command = "sfdx force:project:create --projectname $Name"
+    $command = "sf force project create --name $Name"
 
     if ($OutputDirectory) {
-        $command += " --outputdir $OutputDirectory"
+        $command += " --output-dir $OutputDirectory"
     }
     if ($DefaultPackageDirectory) {
-        $command += " --defaultpacakgedir $DefaultPackageDirectory"
+        $command += " --default-package-dir $DefaultPackageDirectory"
     }
     if ($Namespace) {
         $command += " --namespace $Namespace"
@@ -128,7 +122,7 @@ function New-SalesforceProject {
     $command += " --template $Template"
     $command += " --json"
 
-    $result = Invoke-Sfdx -Command "sfdx force:project:create --projectname $Name --template $Template --json"
+    $result = Invoke-Sfdx -Command $command
     $result = Show-SfdxResult -Result $result
 
     if (($null -ne $DefaultUserName) -and ($DefaultUserName -ne '')) {
@@ -241,8 +235,7 @@ function Get-SalesforceProjectUser {
 function Set-SalesforceProjectUser {
     [CmdletBinding()]
     Param([Parameter(Mandatory = $true)][string] $Username)
-
-    Invoke-Sfdx -Command "sfdx config:set defaultusername=$Username"
+    Invoke-Sfdx -Command "sf config set target-org $Username"
 }
 
 function Test-Salesforce {
@@ -255,44 +248,37 @@ function Test-Salesforce {
         [Parameter(Mandatory = $false)][string][ValidateSet('human', 'tap', 'junit', 'json')] $ResultFormat = 'json',
 
         [Parameter(Mandatory = $false)][switch] $RunAsynchronously,
-        [Parameter(Mandatory = $false)][switch] $DetailedCoverage,
-
+        [Parameter(Mandatory = $false)][switch] $CodeCoverage,
         [Parameter(Mandatory = $false)][int] $WaitMinutes = 10,
-        [Parameter(Mandatory = $false)][switch] $IncludeCodeCoverage = $true,
 
         [Parameter(Mandatory = $false)][string] $OutputDirectory
     )
 
-    $command = "sfdx force:apex:test:run"
+    $command = "sf apex run test"
     if ($ClassName -and $TestName) {
         # Run specific Test in a Class
         $command += " --tests $ClassName.$TestName"
         if ($RunAsynchronously) { $command += "" }
         else { $command += " --synchronous" }
 
-    }
-    elseif ((-not $TestName) -and ($ClassName)) {
+    } elseif ((-not $TestName) -and ($ClassName)) {
         # Run Test Class
-        $command += " --classnames $ClassName"
+        $command += " --class-names $ClassName"
         if ($RunAsynchronously) { $command += "" }
         else { $command += " --synchronous" }
-    }
-    else {
-        # Run all Tests
-        $command += " --testlevel RunLocalTests"
-    }
-
-    # $command += " --wait:$WaitMinutes"
-    if ($OutputDirectory) {
-        $command += " --outputdir $OutputDirectory"
     } else {
-        $command += " --outputdir $PSScriptRoot"
+        $command += " --test-level RunLocalTests" # Run all Tests
     }
 
-    if ($DetailedCoverage) { $command += " --detailedcoverage" }
-    if ($IncludeCodeCoverage) { $command += " --codecoverage" }
-    if ($Username) { $command += " --targetusername $Username" }
-    $command += " --resultformat $ResultFormat"
+    if ($OutputDirectory) {
+        $command += " --output-dir $OutputDirectory"
+    } else {
+        $command += " --output-dir $PSScriptRoot"
+    }
+
+    if ($CodeCoverage) { $command += " --detailed-coverage" }
+    if ($Username) { $command += " --target-org $Username" }
+    $command += " --result-format $ResultFormat"
 
     $result = Invoke-Sfdx -Command $command
     $result = $result | ConvertFrom-Json
@@ -493,20 +479,30 @@ function Push-Salesforce {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $false)][string] $Username,
-        [Parameter(Mandatory = $false)][switch] $ForceOverwrite,
+        [Parameter(Mandatory = $false)][switch] $IgnoreErrors,
+        [Parameter(Mandatory = $false)][switch] $IgnoreConflicts,
         [Parameter(Mandatory = $false)][switch] $IgnoreWarnings,
+
+        [Parameter(Mandatory = $false)][switch] $Async,
+        [Parameter(Mandatory = $false)][switch] $Concise,
+        [Parameter(Mandatory = $false)][switch] $DryRun,
+
         [Parameter(Mandatory = $false)][switch] $Test
     )
 
-    $command = "sfdx force:source:push"
-    if ($Username) { $command += " --targetusername $Username"}
-    if ($ForceOverwrite) { $command += " --forceoverwrite"}
-    if ($IgnoreWarnings) { $command += " --ignorewarnings"}
-    Invoke-Sfdx -Command $command
+    $command = "sf project deploy start"
+    if ($Username) { $command += " --target-org $Username" }
+    if ($IgnoreErrors) { $command += " --ignore-errors" }
+    if ($IgnoreConflicts) { $command += " --ignore-conflicts" }
+    if ($IgnoreWarnings) { $command += " --ignore-warnings" }
 
-    if ($Test) {
-        Test-Salesforce -Username:$Username
-    }
+    if ($Async) { $command += " --async" }
+    if ($Concise) { $command += " --concise" }
+    if ($DryRun) { $command += " --dry-run" }
+
+    if ($Test) { $command += " --test-level RunLocalTests" }
+
+    Invoke-Sfdx -Command $command
 }
 
 function Pull-Salesforce {
