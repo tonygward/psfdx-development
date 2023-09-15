@@ -509,19 +509,16 @@ function Pull-Salesforce {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $false)][string] $Username,
-        [Parameter(Mandatory = $false)][switch] $ForceOverwrite,
+        [Parameter(Mandatory = $false)][string] $PackageNames,
+        [Parameter(Mandatory = $false)][switch] $IgnoreConflicts,
         [Parameter(Mandatory = $false)][switch] $IgnoreWarnings
     )
 
-    $command = "sfdx force:source:pull"
-    if ($Username) { $command += " --targetusername $Username"}
-    if ($ForceOverwrite) { $command += " --forceoverwrite"}
-    if ($IgnoreWarnings) { $command += " --ignorewarnings"}
+    $command = "sf project retrieve start"
+    if ($Username) { $command += " --target-org $Username"}
+    if ($PackageNames) { $command += " --package-name $PackageNames"}
+    if ($IgnoreConflicts) { $command += " --ignore-conflicts"}
     Invoke-Sfdx -Command $command
-
-    if ($Test) {
-        Test-Salesforce -Username:$Username
-    }
 }
 
 Export-ModuleMember Install-SalesforceLwcDevServer
