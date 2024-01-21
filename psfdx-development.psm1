@@ -526,12 +526,20 @@ function New-SalesforceApexClass {
         [Parameter(Mandatory = $true)][string] $Name,
         [Parameter(Mandatory = $false)][string]
             [ValidateSet('DefaultApexClass', 'ApexUnitTest', 'ApexUnitTest', 'InboundEmailService')]
-            $Template = 'DefaultApexClass'
+            $Template = 'DefaultApexClass',
+        [Parameter(Mandatory = $false)][string] $OutputDirectory = 'ForceAppDefault'
     )
 
     $command = "sf apex generate class"
     $command += " --name $Name"
     $command += " --template $Template"
+
+    if ($OutputDirectory = 'ForceAppDefault') {
+        $OutputDirectory = "force-app/main/default/classes"
+    }
+    if ($OutputDirectory) {
+        $command += " --output-dir $OutputDirectory"
+    }
     Invoke-Sf -Command $command
 }
 
@@ -542,7 +550,8 @@ function New-SalesforceApexTrigger {
         [Parameter(Mandatory = $false)][string]
             [ValidateSet('before insert', 'before update', 'before delete', 'after insert', 'after update', 'after delete', 'after undelete')]
             $Event = 'before insert',
-        [Parameter(Mandatory = $false)][string] $SObject
+        [Parameter(Mandatory = $false)][string] $SObject,
+        [Parameter(Mandatory = $false)][string] $OutputDirectory = 'ForceAppDefault'
     )
 
     $command = "sf apex generate trigger"
@@ -551,7 +560,13 @@ function New-SalesforceApexTrigger {
     if ($SObject) {
         $command += " --sobject $SObject"
     }
-    $command += " --json"
+    
+    if ($OutputDirectory = 'ForceAppDefault') {
+        $OutputDirectory = "force-app/main/default/triggers"
+    }
+    if ($OutputDirectory) {
+        $command += " --output-dir $OutputDirectory"
+    }
     Invoke-Sf -Command $command
 }
 
