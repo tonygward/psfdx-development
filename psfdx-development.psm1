@@ -20,8 +20,8 @@ function Install-SalesforceLwcDevServer {
     [CmdletBinding()]
     Param()
     Invoke-Sf -Command "npm install -g node-gyp"
-    Invoke-Sf -Command "sfdx plugins:install @salesforce/lwc-dev-server"
-    Invoke-Sf -Command "sfdx plugins:update"
+    Invoke-Sf -Command "sf plugins install @salesforce/lwc-dev-server"
+    Invoke-Sf -Command "sf plugins update"
 }
 
 function Start-SalesforceLwcDevServer {
@@ -89,6 +89,24 @@ function Remove-SalesforceScratchOrg {
         $command += " --no-prompt"
     }
     Invoke-Sf -Command $command
+}
+
+function Remove-SalesforceScratchOrgs {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)][string] $ScratchOrgUserName,
+        [Parameter()][switch] $NoPrompt
+    )
+    Write-Verbose "Hi world"
+    # $orgs = Get-SalesforceScratchOrgs
+    # Write-Host $orgs
+
+    
+    # $command = "sf org delete scratch --target-org $ScratchOrgUserName"
+    # if ($NoPrompt) {
+    #     $command += " --no-prompt"
+    # }
+    # Invoke-Sf -Command $command
 }
 
 function New-SalesforceProject {
@@ -181,8 +199,7 @@ function Get-SalesforceDefaultUserName {
 
     if (($null -eq $ProjectFolder) -or ($ProjectFolder -eq '')) {
         $sfdxFolder = (Get-Location).Path
-    }
-    else {
+    } else {
         $sfdxFolder = $ProjectFolder
     }
 
@@ -314,7 +331,7 @@ function Get-SalesforceCodeCoverage {
         $query += "WHERE ApexClassOrTriggerId = '$apexClassId' "
     }
 
-    $result = Invoke-Sf -Command "sfdx force:data:soql:query --query `"$query`" --usetoolingapi --targetusername $Username --json"
+    $result = Invoke-Sf -Command "sf data query --query `"$query`" --use-tooling-api --target-org $Username --json"
     $result = $result | ConvertFrom-Json
     if ($result.status -ne 0) {
         throw ($result.message)
@@ -356,7 +373,7 @@ function New-SalesforceJestTest {
     [CmdletBinding()]
     Param([Parameter(Mandatory = $true)][string] $LwcName)
     $filePath = "force-app/main/default/lwc/$LwcName/$LwcName.js"
-    $command = "sfdx force:lightning:lwc:test:create --filepath $filePath --json"
+    $command = "sf force lightning lwc test create --filepath $filePath --json"
     $result = Invoke-Sf -Command $command
     return Show-SfResult -Result $result
 }
@@ -560,7 +577,6 @@ function New-SalesforceApexTrigger {
     if ($SObject) {
         $command += " --sobject $SObject"
     }
-    
     if ($OutputDirectory = 'ForceAppDefault') {
         $OutputDirectory = "force-app/main/default/triggers"
     }
@@ -576,6 +592,7 @@ Export-ModuleMember Start-SalesforceLwcDevServer
 Export-ModuleMember Get-SalesforceScratchOrgs
 Export-ModuleMember New-SalesforceScratchOrg
 Export-ModuleMember Remove-SalesforceScratchOrg
+Export-ModuleMember Remove-SalesforceScratchOrgs
 
 Export-ModuleMember New-SalesforceProject
 Export-ModuleMember Set-SalesforceProject
