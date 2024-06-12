@@ -254,6 +254,22 @@ function Set-SalesforceProjectUser {
     Invoke-Sf -Command "sf config set target-org $Username"
 }
 
+function DeployAndTest-SalesforceApex {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $false)][string] $ClassName,
+        [Parameter(Mandatory = $false)][string] $TestClassName
+    )
+
+    $command = "sf project deploy start"
+    $command += " --metadata ApexClass:$ClassName*"
+    $command += " --ignore-conflicts"
+    $command += " --test-level RunSpecifiedTests"
+    $command += " --tests $TestClassName"
+
+    Invoke-Sf -Command $command
+}
+
 function Test-Salesforce {
     [CmdletBinding()]
     Param(
@@ -601,6 +617,7 @@ Export-ModuleMember Get-SalesforceProjectUser
 Export-ModuleMember Set-SalesforceProjectUser
 
 Export-ModuleMember Test-Salesforce
+Export-ModuleMember DeployAndTest-SalesforceApex
 Export-ModuleMember Get-SalesforceCodeCoverage
 
 Export-ModuleMember Install-SalesforceJest
