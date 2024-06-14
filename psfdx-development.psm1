@@ -93,20 +93,12 @@ function Remove-SalesforceScratchOrg {
 
 function Remove-SalesforceScratchOrgs {
     [CmdletBinding()]
-    Param(
-        [Parameter(Mandatory = $true)][string] $ScratchOrgUserName,
-        [Parameter()][switch] $NoPrompt
-    )
-    Write-Verbose "Hi world"
-    # $orgs = Get-SalesforceScratchOrgs
-    # Write-Host $orgs
-
+    Param()
     
-    # $command = "sf org delete scratch --target-org $ScratchOrgUserName"
-    # if ($NoPrompt) {
-    #     $command += " --no-prompt"
-    # }
-    # Invoke-Sf -Command $command
+    $scratchOrgs = Get-SalesforceScratchOrgs
+    foreach ($scratchOrg in $scratchOrgs) {
+        Remove-SalesforceScratchOrg -ScratchOrgUserName ($scratchOrg.username) -NoPrompt
+    }    
 }
 
 function New-SalesforceProject {
