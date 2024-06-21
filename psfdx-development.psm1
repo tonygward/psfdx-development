@@ -79,9 +79,10 @@ function New-SalesforceScratchOrg {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $false)][string] $DevhubUsername,
+        [Parameter(Mandatory = $false)][switch] $Set,
         [Parameter(Mandatory = $false)][int] $DurationDays,
         [Parameter(Mandatory = $false)][string] $DefinitionFile = 'config/project-scratch-def.json',
-        [Parameter(Mandatory = $false)][int] $WaitMinutes
+        [Parameter(Mandatory = $false)][int] $WaitMinutes        
     )
     $command = "sf org create scratch"
     if ($DevhubUsername) {
@@ -97,7 +98,12 @@ function New-SalesforceScratchOrg {
     $command += " --json"
 
     $result = Invoke-Sf -Command $command
-    return Show-SfResult -Result $result
+    Show-SfResult -Result $result
+
+    $scratchOrgUsername = $result.username
+    if ($Set) {
+        Set-SalesforceProjectUser -Username $scratchOrgUsername
+    }
 }
 
 function Remove-SalesforceScratchOrg {
