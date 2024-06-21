@@ -30,6 +30,28 @@ function Start-SalesforceLwcDevServer {
     Invoke-Sf -Command "sfdx force:lightning:lwc:start"
 }
 
+function Set-SalesforceDefaultDevHub {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)][string] $DevhubUsername
+    )
+    Invoke-Sf -Command "sf config set target-dev-hub=$DevhubUsername --global"
+}
+
+function Remove-SalesforceDefaultDevHub {
+    [CmdletBinding()]
+    Param()
+    Invoke-Sf -Command "sf config unset target-dev-hub --global"
+}
+
+function Get-SalesforceConfig {
+    [CmdletBinding()]
+    Param()
+    $command = "sf config list --json"
+    $result = Invoke-Sf -Command $command
+    Show-SfResult -Result $result
+}
+
 function Get-SalesforceScratchOrgs {
     [CmdletBinding()]
     Param(
@@ -140,6 +162,19 @@ function New-SalesforceProject {
         Set-SalesforceProject -DefaultUserName $DefaultUserName -ProjectFolder $projectFolder
     }
     return $result
+}
+
+function New-SalesforceProjectAndScratchOrg {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)][string] $Name,
+        [Parameter(Mandatory = $true)][string] $DevhubUsername
+    )
+    New-SalesforceProject -Name $Name
+    Push-Location -Path $Name    
+    Remove-SalesforceScratchOrgs 
+    $scratchOrg = New-SalesforceScratchOrg -DevhubUsername $DevhubUsername    
+    Set-SalesforceProjectUser -Username ($scratchOrg.username)
 }
 
 function Set-SalesforceProject {
@@ -597,6 +632,10 @@ function New-SalesforceApexTrigger {
 Export-ModuleMember Install-SalesforceLwcDevServer
 Export-ModuleMember Start-SalesforceLwcDevServer
 
+Export-ModuleMember Set-SalesforceDefaultDevHub
+Export-ModuleMember Remove-SalesforceDefaultDevHub
+Export-ModuleMember Get-SalesforceConfig
+
 Export-ModuleMember Get-SalesforceScratchOrgs
 Export-ModuleMember New-SalesforceScratchOrg
 Export-ModuleMember Remove-SalesforceScratchOrg
@@ -607,6 +646,7 @@ Export-ModuleMember Set-SalesforceProject
 Export-ModuleMember Get-SalesforceDefaultUserName
 Export-ModuleMember Get-SalesforceProjectUser
 Export-ModuleMember Set-SalesforceProjectUser
+Export-ModuleMember New-SalesforceProjectAndScratchOrg
 
 Export-ModuleMember Test-Salesforce
 Export-ModuleMember DeployAndTest-SalesforceApex
