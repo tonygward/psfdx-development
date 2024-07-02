@@ -415,7 +415,7 @@ function Get-SalesforceCodeCoverage {
 function Install-SalesforceJest {
     [CmdletBinding()]
     Param()
-    Invoke-Sf -Command "sfdx force:lightning:lwc:test:setup"
+    Invoke-Sf -Command "yarn add -D @salesforce/sfdx-lwc-jest"
 }
 
 function New-SalesforceJestTest {
